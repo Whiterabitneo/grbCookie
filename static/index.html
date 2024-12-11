@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Run Script</title>
+</head>
+<body>
+    <h1>Click the Button to Run the Script</h1>
+
+    <!-- Button to trigger the script -->
+    <button id="runScriptBtn">Run Script</button>
+
+    <div id="response"></div>
+
+    <script>
+        document.getElementById('runScriptBtn').addEventListener('click', function () {
+            // Trigger the backend script to collect data and send email
+            fetch('https://js-alpah3tmail.onrender.com/bypass', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    action: 'run_script'  // You can send any data if necessary
+                })
+            })
+            .then(response => response.json())
+            .then(result => {
+                document.getElementById('response').innerHTML = JSON.stringify(result);
+            })
+            .catch(error => {
+                document.getElementById('response').innerHTML = 'Error: ' + error;
+            });
+        });
+    </script>
+</body>
+</html>
